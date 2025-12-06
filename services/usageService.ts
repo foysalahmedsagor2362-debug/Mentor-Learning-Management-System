@@ -1,14 +1,16 @@
 const DAILY_LIMIT = 50;
-const USAGE_KEY = 'aimers_usage_stats';
 
 interface UsageStats {
   date: string; // YYYY-MM-DD
   count: number;
 }
 
-export const getUsage = (): number => {
+const getUsageKey = (userId?: string) => `aimers_usage_stats_${userId || 'guest'}`;
+
+export const getUsage = (userId?: string): number => {
+  if (!userId) return 0;
   const today = new Date().toISOString().split('T')[0];
-  const stored = localStorage.getItem(USAGE_KEY);
+  const stored = localStorage.getItem(getUsageKey(userId));
   
   if (stored) {
     const stats: UsageStats = JSON.parse(stored);
@@ -19,13 +21,14 @@ export const getUsage = (): number => {
   return 0;
 };
 
-export const getRemainingUsage = (): number => {
-  return Math.max(0, DAILY_LIMIT - getUsage());
+export const getRemainingUsage = (userId?: string): number => {
+  return Math.max(0, DAILY_LIMIT - getUsage(userId));
 };
 
-export const incrementUsage = (): boolean => {
+export const incrementUsage = (userId?: string): boolean => {
+  if (!userId) return false;
   const today = new Date().toISOString().split('T')[0];
-  const current = getUsage();
+  const current = getUsage(userId);
 
   if (current >= DAILY_LIMIT) {
     return false;
@@ -36,10 +39,10 @@ export const incrementUsage = (): boolean => {
     count: current + 1
   };
   
-  localStorage.setItem(USAGE_KEY, JSON.stringify(newStats));
+  localStorage.setItem(getUsageKey(userId), JSON.stringify(newStats));
   return true;
 };
 
-export const hasUsageRemaining = (): boolean => {
-  return getUsage() < DAILY_LIMIT;
+export const hasUsageRemaining = (userId?: string): boolean => {
+  return getUsage(userId) < DAILY_LIMIT;
 };

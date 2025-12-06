@@ -12,7 +12,9 @@ import {
   LogOut,
   Moon,
   Sun,
-  User as UserIcon
+  User as UserIcon,
+  KeyRound,
+  ArrowRight
 } from 'lucide-react';
 
 // Components
@@ -54,7 +56,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, user, onLogout, isDarkMode, toggleTheme }) => {
   const location = useLocation();
-  const usage = getRemainingUsage();
+  const usage = getRemainingUsage(user?.id);
 
   return (
     <>
@@ -215,6 +217,8 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, isDarkMode, t
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [hasApiKey, setHasApiKey] = useState(false);
+  const [manualKey, setManualKey] = useState('');
   
   // Dark Mode State
   const [darkMode, setDarkMode] = useState(() => {
@@ -235,6 +239,42 @@ const App: React.FC = () => {
     }
   }, [darkMode]);
 
+  useEffect(() => {
+    const checkApiKey = async () => {
+      // 1. Check for local storage key (User entered manually)
+      const localKey = localStorage.getItem('aimers_api_key');
+      
+      // 2. Check for environment variable (Dev/Build time)
+      const envKey = process.env.API_KEY;
+
+      if (localKey || (envKey && envKey.length > 0)) {
+        setHasApiKey(true);
+        return;
+      }
+
+      // 3. Fallback: Check AI Studio window object (Project IDX)
+      if (window.aistudio) {
+        const hasKey = await window.aistudio.hasSelectedApiKey();
+        if (hasKey) {
+          setHasApiKey(true);
+          return;
+        }
+      }
+      
+      setHasApiKey(false);
+    };
+    checkApiKey();
+  }, []);
+
+  const handleSaveManualKey = () => {
+    if (manualKey.trim().length > 10) {
+      localStorage.setItem('aimers_api_key', manualKey.trim());
+      setHasApiKey(true);
+    } else {
+      alert("Please enter a valid API key.");
+    }
+  };
+
   const toggleTheme = () => setDarkMode(!darkMode);
 
   useEffect(() => {
@@ -252,8 +292,6 @@ const App: React.FC = () => {
 
   const handleLogin = (newUser: User) => {
     // SECURITY CHECK: Authorization validation
-    // If a user is currently logged in, ensure the update is for the same user ID.
-    // This simulates "if (userId !== req.user.id)" in a client-side context.
     if (user && user.id !== newUser.id) {
        console.error("Authorization Error: User ID mismatch during profile update.");
        alert("Security Alert: Unauthorized profile update attempt detected.");
@@ -269,6 +307,68 @@ const App: React.FC = () => {
     localStorage.removeItem('aimers_user');
   };
 
+  // API Key Selection Screen
+  if (!hasApiKey) {
+    return (
+      <div className={darkMode ? 'dark' : ''}>
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors">
+           <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-xl max-w-md w-full text-center space-y-6 border border-slate-100 dark:border-slate-800">
+              <div className="flex justify-center mb-2">
+                <Logo size="large" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center justify-center gap-2">
+                  <KeyRound size={24} className="text-indigo-600 dark:text-indigo-400" /> API Key Required
+                </h2>
+                <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm leading-relaxed">
+                  To use the AI features of Aimers, please enter your Google Gemini API Key.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                 <input 
+                   type="password" 
+                   value={manualKey}
+                   onChange={(e) => setManualKey(e.target.value)}
+                   placeholder="Paste your API Key here..."
+                   className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                 />
+                 <button 
+                  onClick={handleSaveManualKey}
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-200 dark:shadow-none flex items-center justify-center gap-2"
+                >
+                  Start Using App <ArrowRight size={18} />
+                </button>
+              </div>
+
+              {window.aistudio && (
+                <button 
+                  onClick={async () => {
+                    if (window.aistudio) {
+                      await window.aistudio.openSelectKey();
+                      setHasApiKey(true);
+                    }
+                  }}
+                  className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  Or select Project (IDX Only)
+                </button>
+              )}
+              
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl text-left">
+                <p className="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">How to get a key:</p>
+                <ol className="text-xs text-slate-500 dark:text-slate-400 list-decimal pl-4 space-y-1">
+                   <li>Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-indigo-600 underline">Google AI Studio</a>.</li>
+                   <li>Click "Create API key".</li>
+                   <li>Copy the key string and paste it above.</li>
+                </ol>
+              </div>
+           </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <div className={darkMode ? 'dark' : ''}>
@@ -282,10 +382,10 @@ const App: React.FC = () => {
       <Layout user={user} onLogout={handleLogout} isDarkMode={darkMode} toggleTheme={toggleTheme}>
         <Routes>
           <Route path="/" element={<Dashboard user={user} onUpdateUser={handleLogin} isDarkMode={darkMode} />} />
-          <Route path="/tracker" element={<StudyTracker />} />
-          <Route path="/tests" element={<MockTest />} />
+          <Route path="/tracker" element={<StudyTracker user={user} />} />
+          <Route path="/tests" element={<MockTest user={user} />} />
           <Route path="/notes" element={<SmartNotes />} />
-          <Route path="/ask-aimers" element={<AiTeacher />} />
+          <Route path="/ask-aimers" element={<AiTeacher user={user} />} />
           <Route path="/profile" element={<Profile user={user} onUpdateUser={handleLogin} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

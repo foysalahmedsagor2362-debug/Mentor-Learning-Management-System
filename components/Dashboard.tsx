@@ -30,10 +30,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, isDarkMode })
 
   useEffect(() => {
     const savedSessions = localStorage.getItem('studySessions');
-    if (savedSessions) setStudySessions(JSON.parse(savedSessions));
+    if (savedSessions) {
+      const allSessions: StudySession[] = JSON.parse(savedSessions);
+      // Security Check: Filter data by userId
+      setStudySessions(allSessions.filter(s => s.userId === user?.id));
+    }
 
     const savedResults = localStorage.getItem('mockResults');
-    if (savedResults) setMockResults(JSON.parse(savedResults));
+    if (savedResults) {
+      const allResults: MockTestResult[] = JSON.parse(savedResults);
+      // Security Check: Filter data by userId
+      setMockResults(allResults.filter(r => r.userId === user?.id));
+    }
 
     const savedRoutine = localStorage.getItem('myRoutine');
     let currentRoutine: Routine | null = null;
@@ -42,10 +50,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, isDarkMode })
       setRoutine(currentRoutine);
     }
 
-    const savedUser = localStorage.getItem('aimers_user');
-    const currentUser = savedUser ? JSON.parse(savedUser) : user;
-
-    setUsageLeft(getRemainingUsage());
+    setUsageLeft(getRemainingUsage(user?.id));
 
     // --- Daily Reminder Logic ---
     const checkDailyReminder = () => {
@@ -78,7 +83,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, isDarkMode })
         setTodaysTasks(todayItems);
         setShowDailyModal(true);
         localStorage.setItem('last_daily_reminder', todayStr);
-        triggerSystemNotification(todayItems.length, currentUser?.name);
+        triggerSystemNotification(todayItems.length, user?.name || "Aimer");
       }
     };
 
@@ -86,7 +91,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser, isDarkMode })
     const timer = setTimeout(checkDailyReminder, 1000);
     return () => clearTimeout(timer);
 
-  }, []);
+  }, [user]);
 
   const triggerSystemNotification = (taskCount: number, userName: string) => {
     if (!('Notification' in window)) return;

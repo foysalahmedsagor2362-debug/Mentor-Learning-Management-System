@@ -2,19 +2,12 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL } from "../constants";
 
 const getAiClient = () => {
-  // Try to retrieve API key from various common environment variable patterns
-  // Vite uses import.meta.env.VITE_API_KEY
-  // Create React App uses process.env.REACT_APP_API_KEY
-  // Standard Node uses process.env.API_KEY
-  
-  // @ts-ignore - Handle potential TS errors if types aren't set for import.meta
-  const apiKey = import.meta.env?.VITE_API_KEY || 
-                 process.env.REACT_APP_API_KEY || 
-                 process.env.API_KEY;
+  // Priority: 1. Environment Variable (dev) 2. LocalStorage (production/user entered)
+  const apiKey = process.env.API_KEY || localStorage.getItem('aimers_api_key');
 
   if (!apiKey) {
-    console.error("API_KEY is missing. Please set VITE_API_KEY in your environment variables.");
-    throw new Error("API Key missing");
+    console.error("API_KEY is missing.");
+    throw new Error("API Key missing. Please ensure you have entered your key in the app.");
   }
   return new GoogleGenAI({ apiKey });
 };

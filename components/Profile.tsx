@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Goal } from '../types';
-import { User as UserIcon, Mail, BookOpen, GraduationCap, Target, Save, X, Pencil } from 'lucide-react';
+import { User as UserIcon, Mail, BookOpen, GraduationCap, Target, Save, X, Pencil, KeyRound, Trash2 } from 'lucide-react';
 
 interface ProfileProps {
   user: User | null;
@@ -9,6 +9,7 @@ interface ProfileProps {
 
 const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [hasCustomKey, setHasCustomKey] = useState(false);
   const [formData, setFormData] = useState<User>(user || {
     id: '',
     name: '',
@@ -18,6 +19,13 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
     goal: Goal.GPA_5,
     joinedAt: new Date().toISOString()
   });
+
+  useEffect(() => {
+    // Check if user has a custom key saved
+    if (localStorage.getItem('aimers_api_key')) {
+      setHasCustomKey(true);
+    }
+  }, []);
 
   if (!user) return null;
 
@@ -29,6 +37,14 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
   const handleCancel = () => {
     setFormData(user);
     setIsEditing(false);
+  };
+
+  const handleRemoveApiKey = () => {
+    if (window.confirm("Are you sure you want to remove your saved API Key? You will need to enter it again to use AI features.")) {
+      localStorage.removeItem('aimers_api_key');
+      setHasCustomKey(false);
+      window.location.reload(); // Reload to trigger the API key prompt again
+    }
   };
 
   return (
@@ -177,6 +193,28 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
             </div>
         </div>
       </div>
+
+      {/* API Key Settings */}
+      {hasCustomKey && (
+         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800">
+           <div className="flex justify-between items-center">
+             <div>
+                <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                   <KeyRound size={18} className="text-indigo-600 dark:text-indigo-400" /> AI Access Key
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                   You have manually saved an API Key for AI features.
+                </p>
+             </div>
+             <button 
+               onClick={handleRemoveApiKey}
+               className="px-4 py-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+             >
+               <Trash2 size={16} /> Remove Key
+             </button>
+           </div>
+         </div>
+      )}
     </div>
   );
 };

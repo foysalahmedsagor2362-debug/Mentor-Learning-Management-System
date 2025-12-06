@@ -26,6 +26,7 @@ export interface User {
 
 export interface StudySession {
   id: string;
+  userId: string;
   subject: Subject | string;
   topic?: string;
   durationMinutes: number;
@@ -55,6 +56,7 @@ export interface MockQuestion {
 }
 
 export interface MockTestResult {
+  userId: string;
   subject: string;
   score: number;
   totalQuestions: number;

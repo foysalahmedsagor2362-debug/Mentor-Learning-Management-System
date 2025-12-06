@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { sendChatMessage } from '../services/geminiService';
-import { ChatMessage } from '../types';
-import { Send, Image as ImageIcon, FileText, Loader2, Bot, User, Paperclip, Trash2 } from 'lucide-react';
+import { ChatMessage, User } from '../types';
+import { Send, Image as ImageIcon, FileText, Loader2, Bot, User as UserIcon, Paperclip, Trash2 } from 'lucide-react';
 import { incrementUsage, hasUsageRemaining } from '../services/usageService';
 
-const AiTeacher: React.FC = () => {
+const AiTeacher: React.FC<{user: User | null}> = ({ user }) => {
   const [language, setLanguage] = useState<'bengali' | 'english'>('bengali');
   
   // Initialize messages from localStorage or default
@@ -103,7 +103,7 @@ const AiTeacher: React.FC = () => {
   const handleSend = async () => {
     if ((!input.trim() && !selectedFile) || loading) return;
 
-    if (!hasUsageRemaining()) {
+    if (!hasUsageRemaining(user?.id)) {
       alert("Daily limit reached! Please upgrade to continue.");
       return;
     }
@@ -133,7 +133,7 @@ const AiTeacher: React.FC = () => {
     setLoading(true);
 
     try {
-      incrementUsage(); // Deduct usage
+      incrementUsage(user?.id); // Deduct usage
       const history = messages.map(m => ({
         role: m.role,
         parts: [{ text: m.text }]
@@ -214,7 +214,7 @@ const AiTeacher: React.FC = () => {
             <div key={msg.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
               <div className={`flex max-w-[85%] md:max-w-[70%] gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 ${isUser ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' : 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400'}`}>
-                  {isUser ? <User size={16} /> : <Bot size={16} />}
+                  {isUser ? <UserIcon size={16} /> : <Bot size={16} />}
                 </div>
                 
                 <div className={`p-4 rounded-2xl ${isUser ? 'bg-indigo-600 dark:bg-indigo-700 text-white rounded-tr-none' : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm border border-slate-100 dark:border-slate-800 rounded-tl-none'}`}>

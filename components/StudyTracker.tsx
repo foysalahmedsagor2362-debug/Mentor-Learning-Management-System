@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, Square, History, Clock, Sparkles, Loader2, Calendar, BookOpen, Trash2, ArrowRight } from 'lucide-react';
 import { SUBJECTS_LIST } from '../constants';
-import { StudySession, Routine } from '../types';
+import { StudySession, Routine, User } from '../types';
 import { generateRoutine } from '../services/geminiService';
 import { incrementUsage, hasUsageRemaining } from '../services/usageService';
 
-const StudyTracker: React.FC = () => {
+const StudyTracker: React.FC<{user: User | null}> = ({ user }) => {
   // Timer State
   const [isActive, setIsActive] = useState(false);
   const [seconds, setSeconds] = useState(0);
@@ -29,12 +29,16 @@ const StudyTracker: React.FC = () => {
 
   useEffect(() => {
     const savedSessions = localStorage.getItem('studySessions');
-    if (savedSessions) setSessions(JSON.parse(savedSessions));
+    if (savedSessions) {
+      const allSessions: StudySession[] = JSON.parse(savedSessions);
+      // Security: Filter sessions by user ID
+      setSessions(allSessions.filter(s => s.userId === user?.id));
+    }
 
     const savedRoutine = localStorage.getItem('myRoutine');
     if (savedRoutine) setCurrentRoutine(JSON.parse(savedRoutine));
     else setShowGenerator(true);
-  }, []);
+  }, [user]);
 
   // --- Timer Functions ---
   const startTimer = () => {
@@ -54,17 +58,27 @@ const StudyTracker: React.FC = () => {
   };
 
   const stopTimer = () => {
+    if (!user) {
+      alert("You must be logged in to save sessions.");
+      return;
+    }
     if (seconds > 60) { // Only save if > 1 minute
       const newSession: StudySession = {
         id: Date.now().toString(),
+        userId: user.id, // Attach user ID
         subject: selectedSubject,
         topic: topic,
         durationMinutes: Math.floor(seconds / 60),
         date: new Date().toISOString()
       };
-      const updated = [newSession, ...sessions];
-      setSessions(updated);
-      localStorage.setItem('studySessions', JSON.stringify(updated));
+      
+      // Load current full list to append (in case state is filtered)
+      const allSaved = JSON.parse(localStorage.getItem('studySessions') || '[]');
+      const updatedAll = [newSession, ...allSaved];
+      localStorage.setItem('studySessions', JSON.stringify(updatedAll));
+      
+      // Update local view
+      setSessions(prev => [newSession, ...prev]);
     }
     setSeconds(0);
     setIsActive(false);
@@ -83,16 +97,14 @@ const StudyTracker: React.FC = () => {
   const handleGenerateRoutine = async () => {
     if (!profile) return;
     
-    if (!hasUsageRemaining()) {
+    if (!hasUsageRemaining(user?.id)) {
         alert("Daily limit reached! Please upgrade.");
         return;
     }
 
     setLoading(true);
     try {
-      incrementUsage();
-      const userStr = localStorage.getItem('aimers_user');
-      const user = userStr ? JSON.parse(userStr) : null;
+      incrementUsage(user?.id);
       const userGoal = user?.goal || "HSC Preparation";
 
       const result = await generateRoutine(profile, weaknesses, hours, userGoal, duration, topics);

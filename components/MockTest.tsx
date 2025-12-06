@@ -5,7 +5,7 @@ import { MockQuestion, MockTestResult, User } from '../types';
 import { Loader2, CheckCircle, XCircle, Trophy, ArrowRight, FileUp, Sparkles } from 'lucide-react';
 import { incrementUsage, hasUsageRemaining } from '../services/usageService';
 
-const MockTest: React.FC = () => {
+const MockTest: React.FC<{user: User | null}> = ({ user }) => {
   const [step, setStep] = useState<'setup' | 'quiz' | 'result'>('setup');
   const [subject, setSubject] = useState(SUBJECTS_LIST[0]);
   const [topic, setTopic] = useState('');
@@ -30,16 +30,14 @@ const MockTest: React.FC = () => {
   };
 
   const handleStart = async () => {
-    if (!hasUsageRemaining()) {
+    if (!hasUsageRemaining(user?.id)) {
       alert("Daily limit reached! Please upgrade.");
       return;
     }
     
     setLoading(true);
     try {
-      incrementUsage();
-      const userStr = localStorage.getItem('aimers_user');
-      const user: User | null = userStr ? JSON.parse(userStr) : null;
+      incrementUsage(user?.id);
       const goal = user?.goal || "HSC Exam";
 
       const selectedTopic = topic || availableTopics[0];
@@ -67,15 +65,19 @@ const MockTest: React.FC = () => {
     });
     setScore(correctCount);
     
-    // Save Result
-    const newResult: MockTestResult = {
-      subject: pdfFile ? 'Mixed/PDF' : subject,
-      score: correctCount,
-      totalQuestions: questions.length,
-      date: new Date().toISOString()
-    };
-    const prev = JSON.parse(localStorage.getItem('mockResults') || '[]');
-    localStorage.setItem('mockResults', JSON.stringify([newResult, ...prev]));
+    if (user) {
+      // Save Result with userId
+      const newResult: MockTestResult = {
+        userId: user.id,
+        subject: pdfFile ? 'Mixed/PDF' : subject,
+        score: correctCount,
+        totalQuestions: questions.length,
+        date: new Date().toISOString()
+      };
+      
+      const prev = JSON.parse(localStorage.getItem('mockResults') || '[]');
+      localStorage.setItem('mockResults', JSON.stringify([newResult, ...prev]));
+    }
     
     setStep('result');
   };
