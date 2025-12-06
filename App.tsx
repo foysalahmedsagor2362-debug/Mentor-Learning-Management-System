@@ -240,11 +240,26 @@ const App: React.FC = () => {
   useEffect(() => {
     const savedUser = localStorage.getItem('aimers_user');
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      const parsedUser = JSON.parse(savedUser);
+      // Ensure existing users have IDs for security check
+      if (!parsedUser.id) {
+        parsedUser.id = Date.now().toString(); // Assign fallback ID
+        localStorage.setItem('aimers_user', JSON.stringify(parsedUser));
+      }
+      setUser(parsedUser);
     }
   }, []);
 
   const handleLogin = (newUser: User) => {
+    // SECURITY CHECK: Authorization validation
+    // If a user is currently logged in, ensure the update is for the same user ID.
+    // This simulates "if (userId !== req.user.id)" in a client-side context.
+    if (user && user.id !== newUser.id) {
+       console.error("Authorization Error: User ID mismatch during profile update.");
+       alert("Security Alert: Unauthorized profile update attempt detected.");
+       return;
+    }
+
     setUser(newUser);
     localStorage.setItem('aimers_user', JSON.stringify(newUser));
   };

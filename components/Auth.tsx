@@ -42,6 +42,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
   const handleFinish = () => {
     const user: User = {
+      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
       ...formData,
       classLevel: formData.classLevel as '11' | '12',
       joinedAt: new Date().toISOString()

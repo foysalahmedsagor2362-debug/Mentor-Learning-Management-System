@@ -10,6 +10,7 @@ interface ProfileProps {
 const Profile: React.FC<ProfileProps> = ({ user, onUpdateUser }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<User>(user || {
+    id: '',
     name: '',
     emailOrPhone: '',
     classLevel: '12',

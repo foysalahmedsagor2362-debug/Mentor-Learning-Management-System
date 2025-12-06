@@ -15,6 +15,7 @@ export enum Goal {
 }
 
 export interface User {
+  id: string;
   name: string;
   emailOrPhone: string;
   classLevel: '11' | '12';
